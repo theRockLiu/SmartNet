@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"time"
+	"unsafe"
 )
 
 func start_tcp_service(strLsnAddr string /*":9999"*/) {
@@ -48,6 +49,11 @@ const (
 )
 
 func handle_pkg(bs []byte) (iDone int, err error) {
+	//get pkg header
+	var pHdr *PkgHdr
+	pHdr = (*PkgHdr)(unsafe.Pointer(&bs))
+
+	log.Println(*pHdr)
 
 	iDone = len(bs)
 	return iDone - 1, err
@@ -83,8 +89,7 @@ func handle_conn(conn net.Conn) {
 			iDataIdx += i32Cnt
 			log.Println("data idx : ", iDataIdx)
 			if iDataIdx == iFreeIdx {
-				iDataIdx = 0
-				iFreeIdx = 0
+				iDataIdx, iFreeIdx = 0, 0
 			}
 		}
 	}
@@ -103,6 +108,13 @@ func client() {
 	var bytesWriteBuf [1024 * 64]byte
 	//bytesWriteBuf[0] = 32
 
+	var pHdr *PkgHdr
+	pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
+	pHdr.ui16Opcode = 1
+	pHdr.ui16Others = 1
+	pHdr.ui32PkgLen = 100
+
+	log.Println(*pHdr)
 	i32Cnt, err := conn.Write(bytesWriteBuf[:1024*64-2])
 	//msg := "Hello World"
 	fmt.Println("Sending", i32Cnt)
