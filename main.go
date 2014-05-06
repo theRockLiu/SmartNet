@@ -2,10 +2,10 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 func start_tcp_service(strLsnAddr string /*":9999"*/) {
@@ -50,54 +50,69 @@ const (
 func handle_pkg(bs []byte) (iDone int, err error) {
 
 	iDone = len(bs)
-	return iDone, err
+	return iDone - 1, err
 }
 
 func handle_conn(conn net.Conn) {
 	//
 	defer conn.Close()
 	//
-	var arrReadBuf [CONST_READ_BUF_LEN]byte
-	i32Cnt, i32DataHead, i32FreeHead := int(0), int(0), int(0)
+	var bytesReadBuf [CONST_READ_BUF_LEN]byte
+	i32Cnt, iDataIdx, iFreeIdx := int(0), int(0), int(0)
 	var err error
 	//
 	for {
-		if (CONST_READ_BUF_LEN - i32FreeHead) < CONST_MAX_PKG_LEN {
-			copy(arrReadBuf[:], arrReadBuf[i32DataHead:i32FreeHead])
-			i32FreeHead -= i32DataHead
-			i32DataHead = 0
+
+		if (CONST_READ_BUF_LEN - iFreeIdx) < CONST_MAX_PKG_LEN {
+			copy(bytesReadBuf[:], bytesReadBuf[iDataIdx:iFreeIdx])
+			iFreeIdx -= iDataIdx
+			log.Println("free idx : ", iFreeIdx)
+			iDataIdx = 0
 		}
 
-		i32Cnt, err = conn.Read(arrReadBuf[i32FreeHead:])
+		i32Cnt, err = conn.Read(bytesReadBuf[iFreeIdx:])
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
-		i32FreeHead += i32Cnt
+		iFreeIdx += i32Cnt
 		log.Println("recv : ", i32Cnt, " bytes")
 
-		if (i32FreeHead - i32DataHead) >= CONST_PKG_HDR_LEN {
-			i32Cnt, err = handle_pkg(arrReadBuf[i32DataHead:])
-			i32DataHead += i32Cnt
+		if (iFreeIdx - iDataIdx) >= CONST_PKG_HDR_LEN {
+			i32Cnt, err = handle_pkg(bytesReadBuf[iDataIdx:iFreeIdx])
+			iDataIdx += i32Cnt
+			log.Println("data idx : ", iDataIdx)
+			if iDataIdx == iFreeIdx {
+				iDataIdx = 0
+				iFreeIdx = 0
+			}
 		}
 	}
 }
 
 func client() {
 	// connect to the server
-	c, err := net.Dial("tcp", "127.0.0.1:9999")
+	conn, err := net.Dial("tcp", "127.0.0.1:9999")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
 	// send the message
-	msg := "Hello World"
-	fmt.Println("Sending", msg)
-	err = gob.NewEncoder(c).Encode(msg)
+	//regPkg := RegPkg{32, 1, 1, "fd", "sd"}
+	var bytesWriteBuf [1024 * 64]byte
+	//bytesWriteBuf[0] = 32
+
+	i32Cnt, err := conn.Write(bytesWriteBuf[:1024*64-2])
+	//msg := "Hello World"
+	fmt.Println("Sending", i32Cnt)
+	//err = gob.NewEncoder(c).Encode(msg)
 	if err != nil {
 		fmt.Println(err)
 	}
-	c.Close()
+
+	time.Sleep(1000000000000000000)
+	//conn.Close()
 }
 
 func main() {
