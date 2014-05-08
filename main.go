@@ -31,7 +31,7 @@ func start_tcp_service(strLsnAddr string /*":9999"*/) {
 }
 
 type PkgHdr struct {
-	ui32PkgLen uint32
+	ui32PkgLen int
 	ui16Opcode uint16
 	ui16Others uint16
 }
@@ -48,21 +48,55 @@ const (
 	CONST_MAX_PKG_LEN  = 1024
 )
 
-//type mypointer *uint8
+type IBaseHandler interface {
+	handle_pkg(*PkgHdr) error
+}
+
+type SRegHandler struct {
+}
+
+func (this SRegHandler) handle_pkg(pHdr *PkgHdr) error {
+	log.Println(*pHdr)
+
+	return nil
+}
+
+var handlers [1024]IBaseHandler
+
+const (
+	OPCODE_REG_PKG = 1
+)
+
+func init() {
+	handlers[OPCODE_REG_PKG] = SRegHandler{}
+}
 
 func handle_pkg(bs []byte) (iDone int, err error) {
-
-	//log.Println(bs[0], ", ", bs[1])
-
 	//get pkg header
 	//slice struct:
 	//array *uint8
 	//len int
 	//cap int
 	pTmp := (**uint8)(unsafe.Pointer(&bs)) //get array addr
-	pHdr := (*PkgHdr)(unsafe.Pointer(*pTmp))
+	ui32Len := len(bs)
+	offset := 0
 
-	log.Println(*pHdr)
+	for {
+		pHdr := (*PkgHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(*pTmp)) + uintptr(offset)))
+		log.Println(*pHdr)
+		if pHdr.ui32PkgLen > ui32Len {
+			//not enough
+			break
+		}
+
+		if handlers[pHdr.ui16Opcode].handle_pkg(pHdr) != nil {
+			log.Fatal("god!\n")
+			break
+		}
+
+		offset += pHdr.ui32PkgLen
+		ui32Len -= pHdr.ui32PkgLen
+	}
 
 	iDone = len(bs)
 	return iDone - 1, err
@@ -124,18 +158,22 @@ func client() {
 
 	var pHdr *PkgHdr
 	pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
-	pHdr.ui16Opcode = 1
+	pHdr.ui16Opcode = OPCODE_REG_PKG
 	pHdr.ui16Others = 1
-	pHdr.ui32PkgLen = 100
+	pHdr.ui32PkgLen = 8
 
 	//bytesWriteBuf[0] = 123
 
-	log.Println(*pHdr)
+	log.Println("client : ", *pHdr)
 
 	//bytesWriteBuf[0] = 101
 	//bytesWriteBuf[1] = 102
 
-	i32Cnt, err := conn.Write(bytesWriteBuf[:1024*64-2])
+	i32Cnt, err := conn.Write(bytesWriteBuf[:8])
+	////pHdr.ui16Others = 2
+	//i32Cnt, err = conn.Write(bytesWriteBuf[:8])
+	////pHdr.ui16Others = 3
+	//i32Cnt, err = conn.Write(bytesWriteBuf[:8])
 	//msg := "Hello World"
 	fmt.Println("Sending", i32Cnt)
 	//err = gob.NewEncoder(c).Encode(msg)
