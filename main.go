@@ -48,10 +48,17 @@ const (
 	CONST_MAX_PKG_LEN  = 1024
 )
 
+type mypointer *uint8
+
 func handle_pkg(bs []byte) (iDone int, err error) {
+
+	log.Println(bs[0], ", ", bs[1])
+
 	//get pkg header
 	var pHdr *PkgHdr
-	pHdr = (*PkgHdr)(unsafe.Pointer(&bs))
+	var pTmp *mypointer
+	pTmp = (*mypointer)(unsafe.Pointer(&bs))
+	pHdr = (*PkgHdr)(unsafe.Pointer(*pTmp))
 
 	log.Println(*pHdr)
 
@@ -108,13 +115,24 @@ func client() {
 	var bytesWriteBuf [1024 * 64]byte
 	//bytesWriteBuf[0] = 32
 
+	var hdr PkgHdr
+	log.Println("pkg hdr size is : ", unsafe.Sizeof(hdr))
+	log.Println("pkg hdr align is : ", unsafe.Alignof(hdr.ui32PkgLen), ", ", unsafe.Alignof(hdr.ui16Opcode), ", ", unsafe.Alignof(hdr.ui16Others), ", ", unsafe.Alignof(hdr))
+	log.Println("pkg hdr offset is : ", unsafe.Offsetof(hdr.ui32PkgLen), ", ", unsafe.Offsetof(hdr.ui16Opcode), ", ", unsafe.Offsetof(hdr.ui16Others))
+
 	var pHdr *PkgHdr
 	pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
 	pHdr.ui16Opcode = 1
 	pHdr.ui16Others = 1
 	pHdr.ui32PkgLen = 100
 
+	bytesWriteBuf[0] = 123
+
 	log.Println(*pHdr)
+
+	//bytesWriteBuf[0] = 101
+	//bytesWriteBuf[1] = 102
+
 	i32Cnt, err := conn.Write(bytesWriteBuf[:1024*64-2])
 	//msg := "Hello World"
 	fmt.Println("Sending", i32Cnt)
