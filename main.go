@@ -48,17 +48,19 @@ const (
 	CONST_MAX_PKG_LEN  = 1024
 )
 
-type mypointer *uint8
+//type mypointer *uint8
 
 func handle_pkg(bs []byte) (iDone int, err error) {
 
-	log.Println(bs[0], ", ", bs[1])
+	//log.Println(bs[0], ", ", bs[1])
 
 	//get pkg header
-	var pHdr *PkgHdr
-	var pTmp *mypointer
-	pTmp = (*mypointer)(unsafe.Pointer(&bs))
-	pHdr = (*PkgHdr)(unsafe.Pointer(*pTmp))
+	//slice struct:
+	//array *uint8
+	//len int
+	//cap int
+	pTmp := (**uint8)(unsafe.Pointer(&bs)) //get array addr
+	pHdr := (*PkgHdr)(unsafe.Pointer(*pTmp))
 
 	log.Println(*pHdr)
 
@@ -126,7 +128,7 @@ func client() {
 	pHdr.ui16Others = 1
 	pHdr.ui32PkgLen = 100
 
-	bytesWriteBuf[0] = 123
+	//bytesWriteBuf[0] = 123
 
 	log.Println(*pHdr)
 
