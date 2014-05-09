@@ -42,10 +42,13 @@ type RegPkg struct {
 	bytesPwd  [10]byte
 }
 
+var hdr_for_const PkgHdr
+
 const (
 	CONST_READ_BUF_LEN = 1024 * 64
-	CONST_PKG_HDR_LEN  = 8
-	CONST_MAX_PKG_LEN  = 1024
+
+	CONST_PKG_HDR_LEN = int(unsafe.Sizeof(hdr_for_const))
+	CONST_MAX_PKG_LEN = 1024
 )
 
 type IBaseHandler interface {
@@ -82,8 +85,16 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 	offset := 0
 
 	for {
+
+		if ui32Len < CONST_PKG_HDR_LEN {
+			break
+		}
+
+		pHdr1 := (*PkgHdr)(unsafe.Pointer(*pTmp))
+		log.Println(*pHdr1)
 		pHdr := (*PkgHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(*pTmp)) + uintptr(offset)))
 		log.Println(*pHdr)
+
 		if pHdr.ui32PkgLen > ui32Len {
 			//not enough
 			break
@@ -98,8 +109,7 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 		ui32Len -= pHdr.ui32PkgLen
 	}
 
-	iDone = len(bs)
-	return iDone - 1, err
+	return offset, err
 }
 
 func handle_conn(conn net.Conn) {
@@ -160,7 +170,7 @@ func client() {
 	pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
 	pHdr.ui16Opcode = OPCODE_REG_PKG
 	pHdr.ui16Others = 1
-	pHdr.ui32PkgLen = 8
+	pHdr.ui32PkgLen = 16
 
 	//bytesWriteBuf[0] = 123
 
@@ -169,7 +179,7 @@ func client() {
 	//bytesWriteBuf[0] = 101
 	//bytesWriteBuf[1] = 102
 
-	i32Cnt, err := conn.Write(bytesWriteBuf[:8])
+	i32Cnt, err := conn.Write(bytesWriteBuf[:16])
 	////pHdr.ui16Others = 2
 	//i32Cnt, err = conn.Write(bytesWriteBuf[:8])
 	////pHdr.ui16Others = 3
@@ -186,6 +196,11 @@ func client() {
 }
 
 func main() {
+
+	var arr [1024]byte
+	log.Printf("%p", &arr)
+	log.Printf("%p", unsafe.Pointer(uintptr(unsafe.Pointer(&arr))+1)) //the address only increase 1 byte
+
 	go start_tcp_service(string(":9999"))
 	go client()
 	var input string
