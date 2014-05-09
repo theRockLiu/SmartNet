@@ -59,7 +59,7 @@ type SRegHandler struct {
 }
 
 func (this SRegHandler) handle_pkg(pHdr *PkgHdr) error {
-	log.Println(*pHdr)
+	log.Println("reg handler: ", *pHdr)
 
 	return nil
 }
@@ -129,6 +129,7 @@ func handle_conn(conn net.Conn) {
 			iDataIdx = 0
 		}
 
+		log.Println("recv buf : ", iDataIdx, ", ", iFreeIdx)
 		i32Cnt, err = conn.Read(bytesReadBuf[iFreeIdx:])
 		if err != nil {
 			log.Fatal(err)
@@ -142,7 +143,8 @@ func handle_conn(conn net.Conn) {
 			iDataIdx += i32Cnt
 			log.Println("data idx : ", iDataIdx)
 			if iDataIdx == iFreeIdx {
-				iDataIdx, iFreeIdx = 0, 0
+				iDataIdx = 0
+				iFreeIdx = 0
 			}
 		}
 	}
@@ -180,10 +182,10 @@ func client() {
 	//bytesWriteBuf[1] = 102
 
 	i32Cnt, err := conn.Write(bytesWriteBuf[:16])
-	////pHdr.ui16Others = 2
-	//i32Cnt, err = conn.Write(bytesWriteBuf[:8])
-	////pHdr.ui16Others = 3
-	//i32Cnt, err = conn.Write(bytesWriteBuf[:8])
+	pHdr.ui16Others = 2
+	i32Cnt, err = conn.Write(bytesWriteBuf[:16])
+	pHdr.ui16Others = 3
+	i32Cnt, err = conn.Write(bytesWriteBuf[:16])
 	//msg := "Hello World"
 	fmt.Println("Sending", i32Cnt)
 	//err = gob.NewEncoder(c).Encode(msg)
