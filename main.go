@@ -2,6 +2,7 @@
 package main
 
 import (
+	"SmartNet/utils"
 	"fmt"
 	"log"
 	"net"
@@ -40,6 +41,11 @@ type RegPkg struct {
 	PkgHdr
 	bytesName [10]byte
 	bytesPwd  [10]byte
+}
+
+func (this RegPkg) get_size() int {
+	var pkg RegPkg
+	return int(unsafe.Sizeof(pkg))
 }
 
 var hdr_for_const PkgHdr
@@ -150,9 +156,9 @@ func handle_conn(conn net.Conn) {
 	}
 }
 
-func client() {
+func client(strServerAddr string) {
 	// connect to the server
-	conn, err := net.Dial("tcp", "127.0.0.1:9999")
+	conn, err := net.Dial("tcp", strServerAddr)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -186,6 +192,14 @@ func client() {
 	i32Cnt, err = conn.Write(bytesWriteBuf[:16])
 	pHdr.ui16Others = 3
 	i32Cnt, err = conn.Write(bytesWriteBuf[:16])
+
+	pRegPkg := (*RegPkg)(unsafe.Pointer(&bytesWriteBuf))
+	pRegPkg.ui32PkgLen = pRegPkg.get_size()
+	pRegPkg.ui16Opcode = OPCODE_REG_PKG
+	copy(pRegPkg.bytesName[:], "rock")
+	copy(pRegPkg.bytesPwd[:], "pswd")
+	utils.Write_all_the_data(conn, bytesWriteBuf[:pRegPkg.get_size()])
+
 	//msg := "Hello World"
 	fmt.Println("Sending", i32Cnt)
 	//err = gob.NewEncoder(c).Encode(msg)
@@ -204,7 +218,7 @@ func main() {
 	log.Printf("%p", unsafe.Pointer(uintptr(unsafe.Pointer(&arr))+1)) //the address only increase 1 byte
 
 	go start_tcp_service(string(":9999"))
-	go client()
+	go client(string("127.0.0.1:9999"))
 	var input string
 	fmt.Scanln(&input)
 }
