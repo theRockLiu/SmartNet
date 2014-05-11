@@ -12,7 +12,7 @@ import (
 	"unsafe"
 )
 
-func start_tcp_service(strLsnAddr string /*":9999"*/) {
+func start_tcp_server_service(strLsnAddr string /*":9999"*/) {
 	// listen on a port
 	lsner, err := net.Listen("tcp", strLsnAddr)
 	if err != nil {
@@ -110,43 +110,28 @@ func handle_conn(conn net.Conn) {
 	}
 }
 
-func client(strServerAddr string) {
+func start_tcp_client_service(strServerAddr string) {
+	log.Println("start new tcp client service...")
 	// connect to the server
 	conn, err := net.Dial("tcp", strServerAddr)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	log.Println("established a new conn on ", strServerAddr)
+	defer conn.Close()
+	//sTimeOut := time.Time{5, 0, nil}
+	//conn.SetWriteDeadline(sTimeOut)
 
-	// send the message
-	//regPkg := RegPkg{32, 1, 1, "fd", "sd"}
-	var bytesWriteBuf [1024 * 64]byte
-	//bytesWriteBuf[0] = 32
+	var bytesWriteBuf [pkg.CONST_WRITE_BUF_LEN]byte
 
+	///for testing
 	var hdr pkg.PkgHdr
 	log.Println("pkg hdr size is : ", unsafe.Sizeof(hdr))
 	log.Println("pkg hdr align is : ", unsafe.Alignof(hdr.Mui32PkgLen), ", ", unsafe.Alignof(hdr.Mui16Opcode), ", ", unsafe.Alignof(hdr.Mui16Others), ", ", unsafe.Alignof(hdr))
 	log.Println("pkg hdr offset is : ", unsafe.Offsetof(hdr.Mui32PkgLen), ", ", unsafe.Offsetof(hdr.Mui16Opcode), ", ", unsafe.Offsetof(hdr.Mui16Others))
 
-	//var pHdr *PkgHdr
-	//pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
-	//pHdr.ui16Opcode = OPCODE_REG_PKG
-	//pHdr.ui16Others = 1
-	//pHdr.ui32PkgLen = 16
-
-	////bytesWriteBuf[0] = 123
-
-	//log.Println("client : ", *pHdr)
-
-	////bytesWriteBuf[0] = 101
-	////bytesWriteBuf[1] = 102
-
-	//i32Cnt, err := conn.Write(bytesWriteBuf[:16])
-	//pHdr.ui16Others = 2
-	//i32Cnt, err = conn.Write(bytesWriteBuf[:16])
-	//pHdr.ui16Others = 3
-	//i32Cnt, err = conn.Write(bytesWriteBuf[:16])
-
+	//sign in server...
 	pRegPkg := (*pkg.RegPkg)(unsafe.Pointer(&bytesWriteBuf))
 	pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
 	pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
@@ -154,17 +139,17 @@ func client(strServerAddr string) {
 	copy(pRegPkg.MbytesPwd[:], "pswd")
 	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
 
-	pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
-	pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
-	copy(pRegPkg.MbytesName[:], "liuhy")
-	copy(pRegPkg.MbytesPwd[:], "haha")
-	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
+	//pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
+	//pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
+	//copy(pRegPkg.MbytesName[:], "liuhy")
+	//copy(pRegPkg.MbytesPwd[:], "haha")
+	//err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
 
-	pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
-	pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
-	copy(pRegPkg.MbytesName[:], "hheheheheh")
-	copy(pRegPkg.MbytesPwd[:], "hehehehfdsfd")
-	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
+	//pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
+	//pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
+	//copy(pRegPkg.MbytesName[:], "hheheheheh")
+	//copy(pRegPkg.MbytesPwd[:], "hehehehfdsfd")
+	//err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
 
 	//msg := "Hello World"
 	//fmt.Println("Sending", i32Cnt)
@@ -183,8 +168,8 @@ func main() {
 	log.Printf("%p", &arr)
 	log.Printf("%p", unsafe.Pointer(uintptr(unsafe.Pointer(&arr))+1)) //the address only increase 1 byte
 
-	go start_tcp_service(string(":9999"))
-	go client(string("127.0.0.1:9999"))
+	go start_tcp_server_service(string(":9999"))
+	go start_tcp_client_service(string("127.0.0.1:9999"))
 	var input string
 	fmt.Scanln(&input)
 }
