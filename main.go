@@ -2,6 +2,7 @@
 package main
 
 import (
+	"SmartNet/pkg"
 	"SmartNet/utils"
 	"fmt"
 	"log"
@@ -31,61 +32,6 @@ func start_tcp_service(strLsnAddr string /*":9999"*/) {
 	}
 }
 
-type PkgHdr struct {
-	ui32PkgLen int
-	ui16Opcode uint16
-	ui16Others uint16
-}
-
-type RegPkg struct {
-	PkgHdr
-	bytesName [10]byte
-	bytesPwd  [10]byte
-}
-
-func (this RegPkg) get_size() int {
-	var pkg RegPkg
-	return int(unsafe.Sizeof(pkg))
-}
-
-var hdr_for_const PkgHdr
-
-const (
-	CONST_READ_BUF_LEN = 1024 * 64
-
-	CONST_PKG_HDR_LEN = int(unsafe.Sizeof(hdr_for_const))
-	CONST_MAX_PKG_LEN = 1024
-)
-
-type IBaseHandler interface {
-	handle_pkg(*PkgHdr) error
-}
-
-type SRegHandler struct {
-}
-
-func (this SRegHandler) handle_pkg(pHdr *PkgHdr) error {
-	log.Println("reg handler: ", *pHdr)
-
-	pRegPkg := (*RegPkg)(unsafe.Pointer(pHdr))
-
-	log.Println(*pRegPkg)
-	log.Println(string(pRegPkg.bytesName[:]))
-	log.Println(string(pRegPkg.bytesPwd[:]))
-
-	return nil
-}
-
-var handlers [1024]IBaseHandler
-
-const (
-	OPCODE_REG_PKG = 1
-)
-
-func init() {
-	handlers[OPCODE_REG_PKG] = SRegHandler{}
-}
-
 func handle_pkg(bs []byte) (iDone int, err error) {
 	//get pkg header
 	//slice struct:
@@ -98,27 +44,27 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 
 	for {
 
-		if ui32Len < CONST_PKG_HDR_LEN {
+		if ui32Len < pkg.CONST_PKG_HDR_LEN {
 			break
 		}
 
 		//pHdr1 := (*PkgHdr)(unsafe.Pointer(*pTmp))
 		//log.Println(*pHdr1)
-		pHdr := (*PkgHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(*pTmp)) + uintptr(offset)))
+		pHdr := (*pkg.PkgHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(*pTmp)) + uintptr(offset)))
 		//log.Println(*pHdr)
 
-		if pHdr.ui32PkgLen > ui32Len {
+		if pHdr.Mui32PkgLen > ui32Len {
 			//not enough
 			break
 		}
 
-		if handlers[pHdr.ui16Opcode].handle_pkg(pHdr) != nil {
+		if pkg.Handlers[pHdr.Mui16Opcode].HandlePkg(pHdr) != nil {
 			log.Fatal("god!\n")
 			break
 		}
 
-		offset += pHdr.ui32PkgLen
-		ui32Len -= pHdr.ui32PkgLen
+		offset += pHdr.Mui32PkgLen
+		ui32Len -= pHdr.Mui32PkgLen
 	}
 
 	return offset, err
@@ -128,13 +74,13 @@ func handle_conn(conn net.Conn) {
 	//
 	defer conn.Close()
 	//
-	var bytesReadBuf [CONST_READ_BUF_LEN]byte
+	var bytesReadBuf [pkg.CONST_READ_BUF_LEN]byte
 	i32Cnt, iDataIdx, iFreeIdx := int(0), int(0), int(0)
 	var err error
 	//
 	for {
 
-		if (CONST_READ_BUF_LEN - iFreeIdx) < CONST_MAX_PKG_LEN {
+		if (pkg.CONST_READ_BUF_LEN - iFreeIdx) < pkg.CONST_MAX_PKG_LEN {
 			copy(bytesReadBuf[:], bytesReadBuf[iDataIdx:iFreeIdx])
 			iFreeIdx -= iDataIdx
 			log.Println("free idx : ", iFreeIdx)
@@ -150,7 +96,7 @@ func handle_conn(conn net.Conn) {
 		iFreeIdx += i32Cnt
 		log.Println("recv : ", i32Cnt, " bytes")
 
-		if (iFreeIdx - iDataIdx) >= CONST_PKG_HDR_LEN {
+		if (iFreeIdx - iDataIdx) >= pkg.CONST_PKG_HDR_LEN {
 			i32Cnt, err = handle_pkg(bytesReadBuf[iDataIdx:iFreeIdx])
 			iDataIdx += i32Cnt
 			log.Println("data idx : ", iDataIdx)
@@ -175,10 +121,10 @@ func client(strServerAddr string) {
 	var bytesWriteBuf [1024 * 64]byte
 	//bytesWriteBuf[0] = 32
 
-	var hdr PkgHdr
+	var hdr pkg.PkgHdr
 	log.Println("pkg hdr size is : ", unsafe.Sizeof(hdr))
-	log.Println("pkg hdr align is : ", unsafe.Alignof(hdr.ui32PkgLen), ", ", unsafe.Alignof(hdr.ui16Opcode), ", ", unsafe.Alignof(hdr.ui16Others), ", ", unsafe.Alignof(hdr))
-	log.Println("pkg hdr offset is : ", unsafe.Offsetof(hdr.ui32PkgLen), ", ", unsafe.Offsetof(hdr.ui16Opcode), ", ", unsafe.Offsetof(hdr.ui16Others))
+	log.Println("pkg hdr align is : ", unsafe.Alignof(hdr.Mui32PkgLen), ", ", unsafe.Alignof(hdr.Mui16Opcode), ", ", unsafe.Alignof(hdr.Mui16Others), ", ", unsafe.Alignof(hdr))
+	log.Println("pkg hdr offset is : ", unsafe.Offsetof(hdr.Mui32PkgLen), ", ", unsafe.Offsetof(hdr.Mui16Opcode), ", ", unsafe.Offsetof(hdr.Mui16Others))
 
 	//var pHdr *PkgHdr
 	//pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
@@ -199,12 +145,12 @@ func client(strServerAddr string) {
 	//pHdr.ui16Others = 3
 	//i32Cnt, err = conn.Write(bytesWriteBuf[:16])
 
-	pRegPkg := (*RegPkg)(unsafe.Pointer(&bytesWriteBuf))
-	pRegPkg.ui32PkgLen = pRegPkg.get_size()
-	pRegPkg.ui16Opcode = OPCODE_REG_PKG
-	copy(pRegPkg.bytesName[:], "rock")
-	copy(pRegPkg.bytesPwd[:], "pswd")
-	err = utils.Write_all_the_data(conn, bytesWriteBuf[:pRegPkg.get_size()])
+	pRegPkg := (*pkg.RegPkg)(unsafe.Pointer(&bytesWriteBuf))
+	pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
+	pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
+	copy(pRegPkg.MbytesName[:], "rock")
+	copy(pRegPkg.MbytesPwd[:], "pswd")
+	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
 
 	//msg := "Hello World"
 	//fmt.Println("Sending", i32Cnt)

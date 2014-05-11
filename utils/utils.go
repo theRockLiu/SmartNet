@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func Write_all_the_data(conn net.Conn, bytesWriteBuf []byte) error {
+func WriteAllData(conn net.Conn, bytesWriteBuf []byte) error {
 
 	iStart, iRet, iLen := 0, 0, len(bytesWriteBuf)
 	var err error
