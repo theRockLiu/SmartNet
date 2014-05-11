@@ -152,6 +152,18 @@ func client(strServerAddr string) {
 	copy(pRegPkg.MbytesPwd[:], "pswd")
 	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
 
+	pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
+	pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
+	copy(pRegPkg.MbytesName[:], "liuhy")
+	copy(pRegPkg.MbytesPwd[:], "haha")
+	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
+
+	pRegPkg.Mui32PkgLen = pRegPkg.GetSize()
+	pRegPkg.Mui16Opcode = pkg.OPCODE_REG_PKG
+	copy(pRegPkg.MbytesName[:], "hheheheheh")
+	copy(pRegPkg.MbytesPwd[:], "hehehehfdsfd")
+	err = utils.WriteAllData(conn, bytesWriteBuf[:pRegPkg.GetSize()])
+
 	//msg := "Hello World"
 	//fmt.Println("Sending", i32Cnt)
 	//err = gob.NewEncoder(c).Encode(msg)
