@@ -67,6 +67,12 @@ type SRegHandler struct {
 func (this SRegHandler) handle_pkg(pHdr *PkgHdr) error {
 	log.Println("reg handler: ", *pHdr)
 
+	pRegPkg := (*RegPkg)(unsafe.Pointer(pHdr))
+
+	log.Println(*pRegPkg)
+	log.Println(string(pRegPkg.bytesName[:]))
+	log.Println(string(pRegPkg.bytesPwd[:]))
+
 	return nil
 }
 
@@ -96,10 +102,10 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 			break
 		}
 
-		pHdr1 := (*PkgHdr)(unsafe.Pointer(*pTmp))
-		log.Println(*pHdr1)
+		//pHdr1 := (*PkgHdr)(unsafe.Pointer(*pTmp))
+		//log.Println(*pHdr1)
 		pHdr := (*PkgHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(*pTmp)) + uintptr(offset)))
-		log.Println(*pHdr)
+		//log.Println(*pHdr)
 
 		if pHdr.ui32PkgLen > ui32Len {
 			//not enough
@@ -174,34 +180,34 @@ func client(strServerAddr string) {
 	log.Println("pkg hdr align is : ", unsafe.Alignof(hdr.ui32PkgLen), ", ", unsafe.Alignof(hdr.ui16Opcode), ", ", unsafe.Alignof(hdr.ui16Others), ", ", unsafe.Alignof(hdr))
 	log.Println("pkg hdr offset is : ", unsafe.Offsetof(hdr.ui32PkgLen), ", ", unsafe.Offsetof(hdr.ui16Opcode), ", ", unsafe.Offsetof(hdr.ui16Others))
 
-	var pHdr *PkgHdr
-	pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
-	pHdr.ui16Opcode = OPCODE_REG_PKG
-	pHdr.ui16Others = 1
-	pHdr.ui32PkgLen = 16
+	//var pHdr *PkgHdr
+	//pHdr = (*PkgHdr)(unsafe.Pointer(&bytesWriteBuf))
+	//pHdr.ui16Opcode = OPCODE_REG_PKG
+	//pHdr.ui16Others = 1
+	//pHdr.ui32PkgLen = 16
 
-	//bytesWriteBuf[0] = 123
+	////bytesWriteBuf[0] = 123
 
-	log.Println("client : ", *pHdr)
+	//log.Println("client : ", *pHdr)
 
-	//bytesWriteBuf[0] = 101
-	//bytesWriteBuf[1] = 102
+	////bytesWriteBuf[0] = 101
+	////bytesWriteBuf[1] = 102
 
-	i32Cnt, err := conn.Write(bytesWriteBuf[:16])
-	pHdr.ui16Others = 2
-	i32Cnt, err = conn.Write(bytesWriteBuf[:16])
-	pHdr.ui16Others = 3
-	i32Cnt, err = conn.Write(bytesWriteBuf[:16])
+	//i32Cnt, err := conn.Write(bytesWriteBuf[:16])
+	//pHdr.ui16Others = 2
+	//i32Cnt, err = conn.Write(bytesWriteBuf[:16])
+	//pHdr.ui16Others = 3
+	//i32Cnt, err = conn.Write(bytesWriteBuf[:16])
 
 	pRegPkg := (*RegPkg)(unsafe.Pointer(&bytesWriteBuf))
 	pRegPkg.ui32PkgLen = pRegPkg.get_size()
 	pRegPkg.ui16Opcode = OPCODE_REG_PKG
 	copy(pRegPkg.bytesName[:], "rock")
 	copy(pRegPkg.bytesPwd[:], "pswd")
-	utils.Write_all_the_data(conn, bytesWriteBuf[:pRegPkg.get_size()])
+	err = utils.Write_all_the_data(conn, bytesWriteBuf[:pRegPkg.get_size()])
 
 	//msg := "Hello World"
-	fmt.Println("Sending", i32Cnt)
+	//fmt.Println("Sending", i32Cnt)
 	//err = gob.NewEncoder(c).Encode(msg)
 	if err != nil {
 		fmt.Println(err)
