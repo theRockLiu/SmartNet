@@ -4,6 +4,7 @@ package main
 import (
 	"SmartNet/pkg"
 	"SmartNet/utils"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -19,6 +20,8 @@ func start_tcp_service(strLsnAddr string /*":9999"*/) {
 		return
 	}
 
+	log.Println("now is listening on : ", strLsnAddr)
+
 	for {
 		// accept a connection
 		conn, err := lsner.Accept()
@@ -32,7 +35,7 @@ func start_tcp_service(strLsnAddr string /*":9999"*/) {
 	}
 }
 
-func handle_pkg(bs []byte) (iDone int, err error) {
+func handle_pkg(bs []byte) (int, error) {
 	//get pkg header
 	//slice struct:
 	//array *uint8
@@ -41,6 +44,7 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 	pTmp := (**uint8)(unsafe.Pointer(&bs)) //get array addr
 	ui32Len := len(bs)
 	offset := 0
+	var err error
 
 	for {
 
@@ -48,10 +52,7 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 			break
 		}
 
-		//pHdr1 := (*PkgHdr)(unsafe.Pointer(*pTmp))
-		//log.Println(*pHdr1)
 		pHdr := (*pkg.PkgHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(*pTmp)) + uintptr(offset)))
-		//log.Println(*pHdr)
 
 		if pHdr.Mui32PkgLen > ui32Len {
 			//not enough
@@ -59,6 +60,7 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 		}
 
 		if pkg.Handlers[pHdr.Mui16Opcode].HandlePkg(pHdr) != nil {
+			err = errors.New("handle pkg err!")
 			log.Fatal("god!\n")
 			break
 		}
@@ -71,6 +73,7 @@ func handle_pkg(bs []byte) (iDone int, err error) {
 }
 
 func handle_conn(conn net.Conn) {
+	log.Println("established a new conn, remote addr is : ", conn.RemoteAddr().String())
 	//
 	defer conn.Close()
 	//
@@ -83,23 +86,22 @@ func handle_conn(conn net.Conn) {
 		if (pkg.CONST_READ_BUF_LEN - iFreeIdx) < pkg.CONST_MAX_PKG_LEN {
 			copy(bytesReadBuf[:], bytesReadBuf[iDataIdx:iFreeIdx])
 			iFreeIdx -= iDataIdx
-			log.Println("free idx : ", iFreeIdx)
 			iDataIdx = 0
+			log.Println("move data to read buf head, data idx is 0 and free idx is ", iFreeIdx)
 		}
 
-		log.Println("recv buf : ", iDataIdx, ", ", iFreeIdx)
 		i32Cnt, err = conn.Read(bytesReadBuf[iFreeIdx:])
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
 		iFreeIdx += i32Cnt
-		log.Println("recv : ", i32Cnt, " bytes")
+		log.Println("conn read new bytes, now read buf's data idx is ", iDataIdx, ", and free idx is ", iFreeIdx)
 
 		if (iFreeIdx - iDataIdx) >= pkg.CONST_PKG_HDR_LEN {
 			i32Cnt, err = handle_pkg(bytesReadBuf[iDataIdx:iFreeIdx])
 			iDataIdx += i32Cnt
-			log.Println("data idx : ", iDataIdx)
+			log.Println("hande pkg is done, now data idx is ", iDataIdx, " and free idx is ", iFreeIdx)
 			if iDataIdx == iFreeIdx {
 				iDataIdx = 0
 				iFreeIdx = 0

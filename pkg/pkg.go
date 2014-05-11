@@ -25,8 +25,7 @@ func (this RegPkg) GetSize() int {
 var hdr_for_const PkgHdr
 
 const (
-	CONST_READ_BUF_LEN = 64
-
-	CONST_PKG_HDR_LEN = int(unsafe.Sizeof(hdr_for_const))
-	CONST_MAX_PKG_LEN = 1024
+	CONST_READ_BUF_LEN = 64 * 1024
+	CONST_PKG_HDR_LEN  = int(unsafe.Sizeof(hdr_for_const))
+	CONST_MAX_PKG_LEN  = 1024
 )
