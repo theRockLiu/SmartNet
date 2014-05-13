@@ -2,6 +2,7 @@
 package pkg
 
 import (
+	"SmartNet/base"
 	"log"
 	"unsafe"
 )
@@ -21,6 +22,11 @@ func (this SRegHandler) HandlePkg(pHdr *PkgHdr) error {
 	log.Println(*pRegPkg)
 	log.Println(string(pRegPkg.MbytesName[:]))
 	log.Println(string(pRegPkg.MbytesPwd[:]))
+
+	p := new(base.STcpSession)
+
+	base.GGlobalObj.AddSession(1, (*base.IBaseSession)(unsafe.Pointer(p)))
+	//base.GGlobalObj.AddSession(1, p)
 
 	return nil
 }

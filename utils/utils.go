@@ -27,5 +27,4 @@ func WriteAllData(conn net.Conn, bytesWriteBuf []byte) error {
 	}
 
 	return err
-
 }
