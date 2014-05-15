@@ -13,7 +13,7 @@ import (
 	"unsafe"
 )
 
-func start_tcp_server_service(strLsnAddr string /*":9999"*/) {
+func StartTcpServerService(strLsnAddr string /*":9999"*/) {
 	// listen on a port
 	lsner, err := net.Listen("tcp", strLsnAddr)
 	if err != nil {
@@ -31,8 +31,11 @@ func start_tcp_server_service(strLsnAddr string /*":9999"*/) {
 			continue
 		}
 
+		//
+		pSession := new(STcpSession)
+		pSession.Start()
 		// handle the connection
-		go handle_conn(conn)
+		//go RoutineReadFunc(conn)
 	}
 }
 
@@ -71,44 +74,6 @@ func handle_pkg(bs []byte) (int, error) {
 	}
 
 	return offset, err
-}
-
-func handle_conn(conn net.Conn) {
-	log.Println("established a new conn, remote addr is : ", conn.RemoteAddr().String())
-	//
-	defer conn.Close()
-	//
-	var bytesReadBuf [pkg.CONST_READ_BUF_LEN]byte
-	i32Cnt, iDataIdx, iFreeIdx := int(0), int(0), int(0)
-	var err error
-	//
-	for {
-
-		if (pkg.CONST_READ_BUF_LEN - iFreeIdx) < pkg.CONST_MAX_PKG_LEN {
-			copy(bytesReadBuf[:], bytesReadBuf[iDataIdx:iFreeIdx])
-			iFreeIdx -= iDataIdx
-			iDataIdx = 0
-			log.Println("move data to read buf head, data idx is 0 and free idx is ", iFreeIdx)
-		}
-
-		i32Cnt, err = conn.Read(bytesReadBuf[iFreeIdx:])
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		iFreeIdx += i32Cnt
-		log.Println("conn read new bytes, now read buf's data idx is ", iDataIdx, ", and free idx is ", iFreeIdx)
-
-		if (iFreeIdx - iDataIdx) >= pkg.CONST_PKG_HDR_LEN {
-			i32Cnt, err = handle_pkg(bytesReadBuf[iDataIdx:iFreeIdx])
-			iDataIdx += i32Cnt
-			log.Println("hande pkg is done, now data idx is ", iDataIdx, " and free idx is ", iFreeIdx)
-			if iDataIdx == iFreeIdx {
-				iDataIdx = 0
-				iFreeIdx = 0
-			}
-		}
-	}
 }
 
 func start_tcp_client_service(strServerAddr string) {
@@ -169,7 +134,7 @@ func main() {
 	log.Printf("%p", &arr)
 	log.Printf("%p", unsafe.Pointer(uintptr(unsafe.Pointer(&arr))+1)) //the address only increase 1 byte
 
-	go start_tcp_server_service(string(":9999"))
+	go StartTcpServerService(string(":9999"))
 	go start_tcp_client_service(string("127.0.0.1:9999"))
 	var input string
 	fmt.Scanln(&input)
